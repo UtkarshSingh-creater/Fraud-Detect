@@ -121,7 +121,7 @@ class RiskEngine:
             signal["severity"] = self._get_severity(event_type, event)
         else:
             # Decay severity slightly when not flagged
-            signal["severity"] = max(0.0, signal["severity"] - 0.05)
+            signal["severity"] = max(0.0, signal["severity"] - 0.01)
             if signal["severity"] == 0.0:
                 signal["flagged"] = False
 

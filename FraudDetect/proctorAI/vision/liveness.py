@@ -105,12 +105,12 @@ class LivenessDetector:
         has_movement  = avg_movement > 0.0001   # some natural micro-movement
         blink_rate_ok = (
             MIN_BLINK_RATE_PER_MINUTE <= blink_rate <= MAX_BLINK_RATE_PER_MINUTE
-            if elapsed_minutes > 0.5 else True  # skip check in first 30 seconds
+            if elapsed_minutes > 2.0 else True  # skip check in first 30 seconds
         )
         is_live = has_movement and blink_rate_ok
 
         # ── Flag conditions ──────────────────────────────────────────
-        no_blink_flag    = blink_rate < MIN_BLINK_RATE_PER_MINUTE and elapsed_minutes > 0.5
+        no_blink_flag    = blink_rate < MIN_BLINK_RATE_PER_MINUTE and elapsed_minutes > 2.0
         too_still_flag   = not has_movement and len(self.movement_samples) >= 50
         flagged          = no_blink_flag or too_still_flag
 
