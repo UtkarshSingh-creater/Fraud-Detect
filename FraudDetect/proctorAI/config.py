@@ -53,7 +53,7 @@ NOISE_ANOMALY_THRESHOLD     = 0.85  # sudden spike in audio energy
 
 # ── Deepfake Detection ─────────────────────────
 DEEPFAKE_CHECK_INTERVAL_SEC = 60    # run deepfake check every 60 seconds
-DEEPFAKE_CONFIDENCE_THRESHOLD = 0.75 # flag if synthetic confidence > 0.75
+DEEPFAKE_CONFIDENCE_THRESHOLD = 0.65 # flag if synthetic confidence > 0.75
 
 # ── Temporal / LSTM ────────────────────────────
 TEMPORAL_WINDOW_SIZE        = 60    # analyze last 60 events as a sequence
