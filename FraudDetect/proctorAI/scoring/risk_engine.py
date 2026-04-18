@@ -31,6 +31,7 @@ class RiskEngine:
             "audio_anomaly":     {"flagged": False, "severity": 0.0, "count": 0},
             "deepfake":          {"flagged": False, "severity": 0.0, "count": 0},
             "temporal_pattern":  {"flagged": False, "severity": 0.0, "count": 0},
+            "banned_object":     {"flagged": False, "severity": 0.0, "count": 0},
         }
 
         # ── Event log ─────────────────────────────────────────────────
@@ -105,6 +106,7 @@ class RiskEngine:
             "audio":          "audio_anomaly",
             "deepfake":       "deepfake",
             "temporal":       "temporal_pattern",
+            "banned_object":  "banned_object",
         }
 
         signal_key = mapping.get(event_type)
@@ -217,6 +219,18 @@ class RiskEngine:
 
         if event_type == "face_verify":
             return 0.0 if event.get("same_person", True) else 1.0
+
+        if event_type == "banned_object":
+            # Severity based on how dangerous the object is
+            label = event.get("label", "")
+            conf  = event.get("confidence", 0.5)
+            if label == "cell phone":
+                return min(0.85 + conf * 0.15, 1.0)   # highest — direct cheating tool
+            if label == "laptop":
+                return min(0.70 + conf * 0.15, 1.0)   # second device
+            if label == "book":
+                return min(0.55 + conf * 0.15, 1.0)   # notes / reference material
+            return conf
 
         return 0.5
 
