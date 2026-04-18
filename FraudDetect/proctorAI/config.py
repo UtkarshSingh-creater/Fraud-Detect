@@ -48,7 +48,7 @@ AUDIO_SAMPLE_RATE           = 16000
 AUDIO_CHUNK_SIZE            = 1024
 AUDIO_CHANNELS              = 1
 SPEAKER_COUNT_THRESHOLD     = 1     # flag if more than 1 speaker detected
-WHISPER_ENERGY_THRESHOLD    = 0.02  # low energy + voice = whisper
+WHISPER_ENERGY_THRESHOLD    = 0.01  # low energy + voice = whisper
 NOISE_ANOMALY_THRESHOLD     = 0.85  # sudden spike in audio energy
 
 # ── Deepfake Detection ─────────────────────────

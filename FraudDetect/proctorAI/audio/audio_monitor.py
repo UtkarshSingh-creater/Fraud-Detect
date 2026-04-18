@@ -190,7 +190,7 @@ class AudioMonitor:
             high_energy = samples[samples > mean_energy * 1.3]
 
             # If both clusters are substantial — two speakers
-            if len(low_energy) > 15 and len(high_energy) > 15:
+            if len(low_energy) > 25 and len(high_energy) > 25:
                 return 2, True
 
             return 1, False
