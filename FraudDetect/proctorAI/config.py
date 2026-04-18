@@ -22,16 +22,16 @@ MAX_ALLOWED_FACES           = 1     # flag if more than 1 face detected
 # ── Gaze Tracking ──────────────────────────────
 GAZE_OFFSCREEN_THRESHOLD_X  = 0.70  # x > 0.70 = looking right off screen
 GAZE_OFFSCREEN_THRESHOLD_Y  = 0.70  # y > 0.70 = looking down off screen
-GAZE_LOCK_SECONDS           = 3     # flag if gaze locked to one spot for 3s
+GAZE_LOCK_SECONDS           = 2    # flag if gaze locked to one spot for 3s
 GAZE_SEND_INTERVAL_MS       = 500   # send gaze event every 500ms
 
 # ── Head Pose ──────────────────────────────────
 HEAD_YAW_THRESHOLD          = 30    # degrees left/right before flagging
 HEAD_PITCH_THRESHOLD        = 25    # degrees up/down before flagging
-HEAD_POSE_ALERT_COUNT       = 3     # flag after 3 consecutive violations
+HEAD_POSE_ALERT_COUNT       = 2    # flag after 3 consecutive violations
 
 # ── Liveness ───────────────────────────────────
-BLINK_EAR_THRESHOLD         = 0.20  # Eye Aspect Ratio below this = blink
+BLINK_EAR_THRESHOLD         = 0.22  # Eye Aspect Ratio below this = blink
 BLINK_CONSEC_FRAMES         = 2     # frames eye must be closed to count
 MIN_BLINK_RATE_PER_MINUTE   = 5     # below this = possibly not live
 MAX_BLINK_RATE_PER_MINUTE   = 50    # above this = nervous/suspicious
@@ -52,7 +52,7 @@ WHISPER_ENERGY_THRESHOLD    = 0.01  # low energy + voice = whisper
 NOISE_ANOMALY_THRESHOLD     = 0.85  # sudden spike in audio energy
 
 # ── Object Detection (YOLOv8-nano) ─────────────────
-OBJECT_DETECT_INTERVAL_FRAMES = 15   # run YOLO every 15 frames (~2/sec @ 30fps)
+OBJECT_DETECT_INTERVAL_FRAMES = 8   # run YOLO every 15 frames (~2/sec @ 30fps)
 OBJECT_CONFIDENCE_THRESHOLD   = 0.35 # minimum YOLO confidence to report
 # Object labels (COCO) that are banned during an exam session
 BANNED_OBJECT_CLASSES = ["cell phone", "book", "laptop", "remote"]

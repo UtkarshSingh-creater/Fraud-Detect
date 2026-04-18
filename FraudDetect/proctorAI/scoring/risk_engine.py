@@ -121,7 +121,7 @@ class RiskEngine:
             signal["severity"] = self._get_severity(event_type, event)
         else:
             # Decay severity slightly when not flagged
-            signal["severity"] = max(0.0, signal["severity"] - 0.01)
+            signal["severity"] = max(0.0, signal["severity"] - 0.002)
             if signal["severity"] == 0.0:
                 signal["flagged"] = False
 
@@ -177,6 +177,9 @@ class RiskEngine:
 
     # ── Get severity for specific event types ─────────────────────────────
     def _get_severity(self, event_type, event):
+        if event_type == "banned_object":
+            return 1.0
+            
         if event_type == "paste":
             chars = event.get("char_count", 0)
             return min(chars / 500.0, 1.0)

@@ -99,7 +99,7 @@ class GazeTracker:
             x_variance = np.var(xs)
             y_variance = np.var(ys)
             # Very low variance = gaze not moving = locked onto something
-            if x_variance < 0.0003 and y_variance < 0.0003:
+            if x_variance < 0.00015 and y_variance < 0.00015:
                 gaze_locked = True
 
         # ── Send event at defined interval ───────────────────────────
