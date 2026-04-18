@@ -24,7 +24,10 @@ def on_event(event):
 
 
 def main():
-    analyzer = TemporalAnalyzer(event_callback=on_event)
+    analyzer = TemporalAnalyzer(
+    event_callback = on_event,
+    weights_path   = "ml_models/weights/temporal_lstm.pth",
+)
 
     print("\n── Temporal Analyzer Test ─────────────────")
     print("  Simulating normal then suspicious events")
@@ -53,20 +56,22 @@ def main():
     time.sleep(7)
 
     print("\n  [Phase 2] Feeding suspicious events...")
-    suspicious_events = [
-        {"type": "gaze",      "flagged": True,  "x": 0.9,  "y": 0.9, "gaze_locked": True},
-        {"type": "paste",     "flagged": True,  "char_count": 850},
-        {"type": "gaze",      "flagged": True,  "x": 0.88, "y": 0.91, "gaze_locked": True},
-        {"type": "paste",     "flagged": True,  "char_count": 620},
-        {"type": "audio",     "flagged": True,  "multiple_speakers": True},
-        {"type": "gaze",      "flagged": True,  "x": 0.92, "y": 0.89, "gaze_locked": True},
-        {"type": "process",   "flagged": True,  "process_name": "ChatGPT"},
-        {"type": "paste",     "flagged": True,  "char_count": 920},
-        {"type": "gaze",      "flagged": True,  "x": 0.91, "y": 0.9,  "gaze_locked": True},
-        {"type": "audio",     "flagged": True,  "multiple_speakers": True},
-    ]
-    for e in suspicious_events:
-        analyzer.add_event(e)
+    suspicious_events = []
+
+    # 50 suspicious events to fill the window properly
+    for i in range(50):
+        roll = i % 5
+        if roll == 0:
+            suspicious_events.append({"type": "gaze",    "flagged": True, "gaze_locked": True, "x": 0.9, "y": 0.9})
+        elif roll == 1:
+            suspicious_events.append({"type": "paste",   "flagged": True, "char_count": 850})
+        elif roll == 2:
+            suspicious_events.append({"type": "audio",   "flagged": True, "multiple_speakers": True})
+        elif roll == 3:
+            suspicious_events.append({"type": "process", "flagged": True, "process_name": "ChatGPT"})
+        else:
+            suspicious_events.append({"type": "paste",   "flagged": True, "char_count": 720})
+        analyzer.add_event(suspicious_events[-1])   # add only the latest event
 
     time.sleep(7)
 
