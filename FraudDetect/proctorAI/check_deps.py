@@ -33,12 +33,15 @@ print("-" * 55)
 passed, failed = 0, 0
 for import_name, pkg_name in packages:
     try:
-        mod = __import__(import_name)
+        import importlib, io, sys, contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            mod = importlib.import_module(import_name)
         version = getattr(mod, "__version__", "n/a")
         print(f"{pkg_name:<20} {import_name:<22} {GREEN}✓  {version}{RESET}")
         passed += 1
-    except ImportError as e:
-        print(f"{pkg_name:<20} {import_name:<22} {RED}✗  MISSING — {e}{RESET}")
+    except BaseException as e:
+        print(f"{pkg_name:<20} {import_name:<22} {RED}✗  {type(e).__name__}: {e}{RESET}")
         failed += 1
 
 print("-" * 55)
