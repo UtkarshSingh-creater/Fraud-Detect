@@ -67,10 +67,10 @@ RISK_WEIGHTS = {
     "gaze_offscreen":     15,
     "head_pose":          10,
     "liveness_fail":      10,
-    "biometric_anomaly":  10,
+    "biometric_anomaly":  15,
     "audio_anomaly":      10,
     "deepfake":           10,
-    "temporal_pattern":    5,
+    "temporal_pattern":   10,
 }
 
 # Risk level thresholds
