@@ -31,10 +31,10 @@ HEAD_PITCH_THRESHOLD        = 25    # degrees up/down before flagging
 HEAD_POSE_ALERT_COUNT       = 3     # flag after 3 consecutive violations
 
 # ── Liveness ───────────────────────────────────
-BLINK_EAR_THRESHOLD         = 0.25  # Eye Aspect Ratio below this = blink
+BLINK_EAR_THRESHOLD         = 0.20  # Eye Aspect Ratio below this = blink
 BLINK_CONSEC_FRAMES         = 2     # frames eye must be closed to count
 MIN_BLINK_RATE_PER_MINUTE   = 5     # below this = possibly not live
-MAX_BLINK_RATE_PER_MINUTE   = 40    # above this = nervous/suspicious
+MAX_BLINK_RATE_PER_MINUTE   = 50    # above this = nervous/suspicious
 
 # ── Behavioral Biometrics ──────────────────────
 KEYSTROKE_BASELINE_SECONDS  = 120   # build baseline for first 2 minutes
