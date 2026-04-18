@@ -1,0 +1,27 @@
+# Computer Vision
+opencv-python==4.9.0.80
+mediapipe==0.10.11
+face-recognition==1.3.0
+dlib-bin>=20.0.1
+
+# ML / Deep Learning
+torch==2.3.0
+torchvision==0.18.0
+numpy==1.26.4
+scikit-learn==1.4.2
+
+# Audio
+pyaudio==0.2.14
+librosa==0.10.2
+webrtcvad==2.0.10
+
+# Behavioral Biometrics
+pynput==1.7.6
+
+# WebSocket (to send events to backend)
+websockets==12.0
+
+# Utilities
+python-dotenv==1.0.1
+pillow==10.3.0
+scipy==1.13.0
