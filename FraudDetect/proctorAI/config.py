@@ -51,6 +51,12 @@ SPEAKER_COUNT_THRESHOLD     = 1     # flag if more than 1 speaker detected
 WHISPER_ENERGY_THRESHOLD    = 0.01  # low energy + voice = whisper
 NOISE_ANOMALY_THRESHOLD     = 0.85  # sudden spike in audio energy
 
+# ── Object Detection (YOLOv8-nano) ─────────────────
+OBJECT_DETECT_INTERVAL_FRAMES = 15   # run YOLO every 15 frames (~2/sec @ 30fps)
+OBJECT_CONFIDENCE_THRESHOLD   = 0.35 # minimum YOLO confidence to report
+# Object labels (COCO) that are banned during an exam session
+BANNED_OBJECT_CLASSES = ["cell phone", "book", "laptop", "remote"]
+
 # ── Deepfake Detection ─────────────────────────
 DEEPFAKE_CHECK_INTERVAL_SEC = 60    # run deepfake check every 60 seconds
 DEEPFAKE_CONFIDENCE_THRESHOLD = 0.65 # flag if synthetic confidence > 0.75
@@ -62,15 +68,16 @@ TEMPORAL_SUSPICIOUS_THRESHOLD = 0.80 # flag if LSTM confidence > 0.80
 # ── Risk Scoring Weights ───────────────────────
 # All weights must add up to 100
 RISK_WEIGHTS = {
-    "face_missing":       15,
+    "face_missing":       10,
     "multiple_faces":     15,
-    "gaze_offscreen":     15,
+    "gaze_offscreen":     10,
     "head_pose":          10,
     "liveness_fail":      10,
     "biometric_anomaly":  10,
-    "audio_anomaly":      10,
+    "audio_anomaly":       5,
     "deepfake":           10,
-    "temporal_pattern":    5,
+    "temporal_pattern":   10,
+    "banned_object":      15,   # physical phone/book — highest weight
 }
 
 # Risk level thresholds
@@ -93,3 +100,4 @@ BANNED_PROCESSES = [
     "whatsapp",
     "telegram",
 ]
+

@@ -28,8 +28,9 @@ class AudioMonitor:
         """
         self.event_callback    = event_callback
 
-        # PyAudio setup
-        self.audio             = pyaudio.PyAudio()
+        # PyAudio setup (deferred to start() so macOS permission check
+        # only fires when audio monitoring is explicitly enabled)
+        self.audio             = None
         self.stream            = None
 
         # WebRTC VAD — voice activity detection
@@ -55,15 +56,26 @@ class AudioMonitor:
     # ── Start monitoring ─────────────────────────────────────────────────
     def start(self):
         """Start audio monitoring in background thread."""
+        try:
+            self.audio  = pyaudio.PyAudio()
+            self.stream = self.audio.open(
+                format            = pyaudio.paInt16,
+                channels          = AUDIO_CHANNELS,
+                rate              = AUDIO_SAMPLE_RATE,
+                input             = True,
+                frames_per_buffer = AUDIO_CHUNK_SIZE,
+            )
+        except OSError as e:
+            print(
+                f"\n  [AudioMonitor] ⚠️  Failed to open microphone: {e}"
+                f"\n                 Check System Settings → Privacy & Security → Microphone"
+                f"\n                 and ensure Terminal.app is listed and enabled."
+                f"\n                 Then Cmd+Q Terminal, reopen it, and try again.\n"
+            )
+            self.is_running = False
+            return
         self.is_running = True
-        self.stream     = self.audio.open(
-            format            = pyaudio.paInt16,
-            channels          = AUDIO_CHANNELS,
-            rate              = AUDIO_SAMPLE_RATE,
-            input             = True,
-            frames_per_buffer = AUDIO_CHUNK_SIZE,
-        )
-        self.thread        = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.thread     = threading.Thread(target=self._monitor_loop, daemon=True)
         self.thread.start()
         print("[AudioMonitor] Started — monitoring audio")
 
@@ -76,7 +88,8 @@ class AudioMonitor:
         if self.stream:
             self.stream.stop_stream()
             self.stream.close()
-        self.audio.terminate()
+        if self.audio:
+            self.audio.terminate()
         print("[AudioMonitor] Stopped")
 
     # ── Main monitoring loop ─────────────────────────────────────────────
