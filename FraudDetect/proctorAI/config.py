@@ -71,13 +71,14 @@ RISK_WEIGHTS = {
     "face_missing":       10,
     "multiple_faces":     15,
     "gaze_offscreen":     10,
-    "head_pose":          10,
+    "head_pose":           5,
     "liveness_fail":      10,
     "biometric_anomaly":  10,
     "audio_anomaly":       5,
     "deepfake":           10,
-    "temporal_pattern":   10,
-    "banned_object":      15,   # physical phone/book — highest weight
+    "temporal_pattern":    5,
+    "banned_object":      15,
+    "tab_switch":          5,
 }
 
 # Risk level thresholds

@@ -32,6 +32,7 @@ class RiskEngine:
             "deepfake":          {"flagged": False, "severity": 0.0, "count": 0},
             "temporal_pattern":  {"flagged": False, "severity": 0.0, "count": 0},
             "banned_object":     {"flagged": False, "severity": 0.0, "count": 0},
+            "tab_switch":        {"flagged": False, "severity": 0.0, "count": 0},
         }
 
         # ── Event log ─────────────────────────────────────────────────
@@ -107,6 +108,7 @@ class RiskEngine:
             "deepfake":       "deepfake",
             "temporal":       "temporal_pattern",
             "banned_object":  "banned_object",
+            "tab_switch":     "tab_switch",
         }
 
         signal_key = mapping.get(event_type)
@@ -177,6 +179,9 @@ class RiskEngine:
 
     # ── Get severity for specific event types ─────────────────────────────
     def _get_severity(self, event_type, event):
+        if event_type == "tab_switch":
+            return 1.0 if event.get("is_suspicious") else 0.4
+            
         if event_type == "banned_object":
             return 1.0
             

@@ -24,6 +24,7 @@ from audio.audio_monitor         import AudioMonitor
 from ml_models.deepfake_detector import DeepfakeDetector
 from ml_models.temporal_analyzer import TemporalAnalyzer
 from scoring.risk_engine         import RiskEngine
+from biometrics.window_monitor   import WindowMonitor
 from config import (
     CAMERA_INDEX,
     FRAME_WIDTH,
@@ -540,6 +541,7 @@ def main():
     # ─────────────────────────────────────────────────────────────────────
     keystroke = KeystrokeMonitor(event_callback=on_event)
     mouse_mon = MouseMonitor(event_callback=on_event)
+    window_mon = WindowMonitor(event_callback=on_event)
     audio     = AudioMonitor(event_callback=on_event)
     deepfake  = DeepfakeDetector(
         event_callback = on_event,
@@ -593,6 +595,8 @@ def main():
         print("  [main] MouseMonitor disabled       — set ENABLE_MOUSE=True after")
         print("         granting: System Settings > Privacy & Security > Input Monitoring > add Terminal\n")
 
+    safe_start(window_mon, "WindowMonitor")
+
     if ENABLE_AUDIO:
         safe_start(audio, "AudioMonitor", liveness_check=True)
     else:
@@ -620,6 +624,7 @@ def main():
         try:
             keystroke.stop()
             mouse_mon.stop()
+            window_mon.stop()
             audio.stop()
             deepfake.stop()
             temporal_analyzer.stop()
