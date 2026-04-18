@@ -39,7 +39,7 @@ MAX_BLINK_RATE_PER_MINUTE   = 50    # above this = nervous/suspicious
 # ── Behavioral Biometrics ──────────────────────
 KEYSTROKE_BASELINE_SECONDS  = 120   # build baseline for first 2 minutes
 KEYSTROKE_ANOMALY_THRESHOLD = 2.5   # flag if deviation > 2.5x baseline avg
-PASTE_CHAR_THRESHOLD        = 100   # flag paste if more than 100 chars
+PASTE_CHAR_THRESHOLD        = 80   # flag paste if more than 100 chars
 MOUSE_SAMPLE_INTERVAL_MS    = 100   # sample mouse position every 100ms
 MOUSE_SPEED_THRESHOLD       = 3000  # pixels/sec — above this is suspicious
 
