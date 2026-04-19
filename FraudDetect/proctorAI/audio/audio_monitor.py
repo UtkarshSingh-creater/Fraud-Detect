@@ -153,7 +153,7 @@ class AudioMonitor:
         whisper_detected = (
             is_speech and
             rms_energy < WHISPER_ENERGY_THRESHOLD and
-            rms_energy > 0.001   # not complete silence
+            rms_energy > 0.003   # not complete silence
         )
 
         # ── Check for noise anomaly ───────────────────────────────────

@@ -127,7 +127,7 @@ class MouseMonitor:
             if deviation > 3.0:
                 anomaly_flagged = True
                 anomaly_message = f"Mouse speed anomaly — {deviation:.1f}x faster than baseline"
-            elif deviation < 0.1 and speed > 10:
+            elif deviation < 0.05 and speed > 50:
                 anomaly_flagged = True
                 anomaly_message = f"Mouse movement unusually slow — {deviation:.1f}x baseline"
 

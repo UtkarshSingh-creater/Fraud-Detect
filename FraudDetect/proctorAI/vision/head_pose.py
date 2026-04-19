@@ -90,7 +90,30 @@ class HeadPoseEstimator:
         # ── Convert rotation vector to Euler angles ──────────────────
         rotation_mat, _ = cv2.Rodrigues(rotation_vec)
         pose_mat        = cv2.hconcat([rotation_mat, translation_vec])  # 3×4
-        _, _, _, _, _, _, euler_angles = cv2.decomposeProjectionMatrix(pose_mat)
+        # ── Convert rotation vector to Euler angles ──────────────────
+        rotation_mat, _ = cv2.Rodrigues(rotation_vec)
+
+        # Build proper 4x4 projection matrix
+        proj_matrix = np.hstack([rotation_mat, translation_vec])
+        proj_matrix = np.vstack([proj_matrix, [0, 0, 0, 1]])
+
+        # Decompose to get euler angles
+        _, _, _, _, _, _, euler_angles = cv2.decomposeProjectionMatrix(
+            proj_matrix[:3, :]
+        )
+
+        pitch = float(euler_angles[0])
+        yaw   = float(euler_angles[1])
+        roll  = float(euler_angles[2])
+
+        # Normalize angles to -180 to 180 range
+        pitch = pitch % 360
+        yaw   = yaw   % 360
+        roll  = roll  % 360
+
+        if pitch > 180: pitch -= 360
+        if yaw   > 180: yaw   -= 360
+        if roll  > 180: roll  -= 360
 
         pitch = float(euler_angles[0])
         yaw   = float(euler_angles[1])
@@ -108,7 +131,9 @@ class HeadPoseEstimator:
         if flagged:
             self.violation_count += 1
         else:
-            self.violation_count = max(0, self.violation_count - 1)
+            # Reset immediately so should_alert goes False on the very next
+            # normal frame — prevents "ghost flagging" when count drains slowly.
+            self.violation_count = 0
 
         # Only alert after N consecutive violations
         should_alert = self.violation_count >= HEAD_POSE_ALERT_COUNT

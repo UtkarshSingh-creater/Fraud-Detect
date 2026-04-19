@@ -652,7 +652,7 @@ def main():
         ws_stats = ws_client.get_stats()
         print(f"\n── Final Session Report ─────────────────────────────")
         print(f"  Session ID    : {SESSION_ID}")
-        print(f"  Risk Score    : {snap['risk_score']} / 100")
+        print(f"  Risk Score    : {snap['risk_score']} / 100  (peak: {snap.get('peak_score', snap['risk_score'])})")
         print(f"  Risk Level    : {snap['risk_level']}")
         print(f"  Confidence    : {snap['confidence']}")
         print(f"  Flagged       : {snap['flagged_signals']}")

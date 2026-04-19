@@ -70,9 +70,9 @@ class GazeTracker:
         self.total_gaze_samples += 1
         is_offscreen = (
             norm_x > GAZE_OFFSCREEN_THRESHOLD_X or
+            norm_x < (1.0 - GAZE_OFFSCREEN_THRESHOLD_X) or
             norm_y > GAZE_OFFSCREEN_THRESHOLD_Y or
-            norm_x < (1 - GAZE_OFFSCREEN_THRESHOLD_X) or
-            norm_y < (1 - GAZE_OFFSCREEN_THRESHOLD_Y)
+            norm_y < (1.0 - GAZE_OFFSCREEN_THRESHOLD_Y)
         )
         if is_offscreen:
             self.offscreen_samples += 1
@@ -99,7 +99,7 @@ class GazeTracker:
             x_variance = np.var(xs)
             y_variance = np.var(ys)
             # Very low variance = gaze not moving = locked onto something
-            if x_variance < 0.00015 and y_variance < 0.00015:
+            if x_variance < 0.0003 and y_variance < 0.0003:
                 gaze_locked = True
 
         # ── Send event at defined interval ───────────────────────────
