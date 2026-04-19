@@ -33,6 +33,7 @@ class RiskEngine:
             "temporal_pattern":  {"flagged": False, "severity": 0.0, "count": 0},
             "banned_object":     {"flagged": False, "severity": 0.0, "count": 0},
             "tab_switch":        {"flagged": False, "severity": 0.0, "count": 0},
+            "mouse_anomaly":     {"flagged": False, "severity": 0.0, "count": 0},
         }
 
         # ── Event log ─────────────────────────────────────────────────
@@ -44,6 +45,16 @@ class RiskEngine:
         self.current_score   = 0
         self.current_level   = "LOW"
         self.confidence      = 0.0
+        self.peak_score      = 0
+
+        # ── Sustained flag tracking (drives escalation multiplier) ────
+        # signal_flag_start   : wall-clock time when signal became continuously flagged
+        # signal_last_flagged : wall-clock time of last flagged event (for grace period)
+        self.signal_flag_start   = {k: None for k in self.signals}
+        self.signal_last_flagged = {k: 0.0  for k in self.signals}
+
+        # ── Session peak score (never decreases — survives live-score decay) ──
+        self.session_peak_score  = 0
 
     # ── Ingest event from any module ────────────────────────────────────
     def process_event(self, event):
@@ -76,6 +87,14 @@ class RiskEngine:
         self.current_score = score
         self.current_level = level
         self.confidence    = confidence
+
+        if score > self.peak_score:
+            self.peak_score = score
+
+        # Track the highest score seen this session (survives live-score decay)
+        if score > self.session_peak_score:
+            self.session_peak_score = score
+
         self.score_history.append({"score": score, "timestamp": time.time()})
 
         # Keep only last 100 score snapshots
@@ -102,8 +121,8 @@ class RiskEngine:
             "liveness":       "liveness_fail",
             "keystroke":      "biometric_anomaly",
             "paste":          "biometric_anomaly",
-            "mouse_move":     "biometric_anomaly",
-            "mouse_click":    "biometric_anomaly",
+            "mouse_move":     "mouse_anomaly",
+            "mouse_click":    "mouse_anomaly", 
             "audio":          "audio_anomaly",
             "deepfake":       "deepfake",
             "temporal":       "temporal_pattern",
@@ -121,9 +140,18 @@ class RiskEngine:
             signal["count"]   += 1
             signal["flagged"]  = True
             signal["severity"] = self._get_severity(event_type, event)
+            # Track the wall-clock of this flagged event
+            self.signal_last_flagged[signal_key] = time.time()
+            # Start the sustained timer only on the very first flag of a run
+            if self.signal_flag_start[signal_key] is None:
+                self.signal_flag_start[signal_key] = time.time()
         else:
-            # Decay severity slightly when not flagged
-            signal["severity"] = max(0.0, signal["severity"] - 0.0005)
+            # Grace period: keep the sustained timer alive if last flag was recent
+            since_last = time.time() - self.signal_last_flagged.get(signal_key, 0.0)
+            if since_last > 17.0:
+                self.signal_flag_start[signal_key] = None
+            # Decay severity so score recovers when behaviour improves
+            signal["severity"] = max(0.0, signal["severity"] - 0.01)
             if signal["severity"] == 0.0:
                 signal["flagged"] = False
 
@@ -131,19 +159,59 @@ class RiskEngine:
     def _compute_score(self):
         total     = 0.0
         breakdown = {}
+        now       = time.time()
 
         for signal_key, weight in RISK_WEIGHTS.items():
-            signal    = self.signals[signal_key]
-            # Score = weight * severity (if flagged)
-            # Severity decays when not flagged
-            contrib   = weight * signal["severity"] if signal["flagged"] else 0.0
-            total    += contrib
+            signal        = self.signals[signal_key]
+            sustained_s   = 0.0
+            sustained_x   = 1.0
+            time_factor   = 0.0
+            contrib       = 0.0
+
+            if signal["flagged"]:
+                time_since_last = now - self.signal_last_flagged.get(signal_key, 0.0)
+
+                if time_since_last > 17.0:
+                    # No flagged events for 8 s → auto-clear this signal entirely.
+                    # Handles modules (e.g. ObjectDetector) that never fire
+                    # flagged=False cleanup events when the thing disappears.
+                    signal["flagged"]  = False
+                    signal["severity"] = 0.0
+                    self.signal_flag_start[signal_key] = None
+                else:
+                    # Time-decay factor:
+                    #   0.0 – 1.0 s : full contribution (grace window)
+                    #                 covers brief face-flicker / YOLO miss-frames
+                    #   1.0 – 6.0 s : fades linearly 1.0 → 0.0
+                    #   > 8.0 s     : signal auto-cleared above
+                    GRACE  = 2.0   # seconds — no decay within this window
+                    WINDOW = 15.0   # seconds — linear fade after grace
+                    if time_since_last <= GRACE:
+                        time_factor = 1.0
+                    else:
+                        time_factor = max(0.0, 1.0 - (time_since_last - GRACE) / WINDOW)
+
+                    # Sustained-escalation multiplier: only active while events
+                    # are arriving (within the grace window). Drops to 1× the
+                    # moment the signal stops firing so stale runs don't inflate
+                    # the score.
+                    if time_since_last <= GRACE:
+                        flag_start  = self.signal_flag_start.get(signal_key)
+                        sustained_s = (now - flag_start) if flag_start else 0.0
+                        sustained_x = 1.0 + min(sustained_s / 2.0, 1.0)
+
+                    contrib = weight * signal["severity"] * sustained_x * time_factor
+
+            total += contrib
             breakdown[signal_key] = {
-                "weight":    weight,
-                "flagged":   signal["flagged"],
-                "severity":  round(signal["severity"], 3),
-                "contrib":   round(contrib, 2),
-                "count":     signal["count"],
+                "weight":      weight,
+                "flagged":     signal["flagged"],
+                "severity":    round(signal["severity"], 3),
+                "contrib":     round(contrib, 2),
+                "count":       signal["count"],
+                "sustained_s": round(sustained_s, 1),
+                "sustained_x": round(sustained_x, 2),
+                "time_factor": round(time_factor, 2),
             }
 
         return min(round(total), 100), breakdown
@@ -180,17 +248,20 @@ class RiskEngine:
     # ── Get severity for specific event types ─────────────────────────────
     def _get_severity(self, event_type, event):
         if event_type == "tab_switch":
-            return 1.0 if event.get("is_suspicious") else 0.4
-            
-        if event_type == "banned_object":
-            return 1.0
-            
+            return 1.0   # always high — any app switch during interview is suspicious
+
         if event_type == "paste":
             chars = event.get("char_count", 0)
             return min(chars / 500.0, 1.0)
 
         if event_type == "gaze":
-            return 0.9 if event.get("gaze_locked") else 0.5
+            if event.get("gaze_locked") and event.get("is_offscreen"):
+                return 1.0
+            if event.get("gaze_locked"):
+                return 0.8
+            if event.get("is_offscreen"):
+                return 0.7
+            return 0.2
 
         if event_type == "audio":
             if event.get("multiple_speakers"):
@@ -223,7 +294,13 @@ class RiskEngine:
             return 0.4
 
         if event_type == "head_pose":
-            return 0.6
+            yaw_f   = event.get("yaw_flagged",   False)
+            pitch_f = event.get("pitch_flagged", False)
+            if yaw_f and pitch_f:
+                return 1.0
+            if yaw_f or pitch_f:
+                return 0.85
+            return 0.4
 
         if event_type == "face_verify":
             return 0.0 if event.get("same_person", True) else 1.0
@@ -272,9 +349,11 @@ class RiskEngine:
         confidence       = self._compute_confidence()
 
         return {
-            "risk_score":      score,
-            "risk_level":      level,
-            "confidence":      confidence,
+            "risk_score":         score,
+            "risk_level":         level,
+            "confidence":         confidence,
+            "peak_score":         self.peak_score,
+            "session_peak_score": self.session_peak_score,
             "flagged_signals": [
                 k for k, v in self.signals.items() if v["flagged"]
             ],
@@ -292,9 +371,12 @@ class RiskEngine:
             signal["flagged"]  = False
             signal["severity"] = 0.0
             signal["count"]    = 0
-        self.events        = []
-        self.score_history = []
-        self.session_start = time.time()
+        self.events              = []
+        self.score_history       = []
+        self.session_start       = time.time()
+        self.session_peak_score  = 0
+        self.signal_flag_start   = {k: None for k in self.signals}
+        self.signal_last_flagged = {k: 0.0  for k in self.signals}
         print("[RiskEngine] Session reset")
 
     # ── Send event via callback ───────────────────────────────────────────

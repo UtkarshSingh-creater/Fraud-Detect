@@ -31,7 +31,7 @@ class WebSocketClient:
 
         # Retry settings
         self.retry_interval = 3.0    # seconds between reconnect attempts
-        self.max_retries    = 10     # give up after 10 failed attempts
+        self.max_retries    = 999999     # give up after 10 failed attempts
 
         # Stats
         self.sent_count     = 0
@@ -56,7 +56,7 @@ class WebSocketClient:
     # ── Stop ─────────────────────────────────────────────────────────────
     def stop(self):
         self.is_running = False
-        if self._loop:
+        if self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self._loop.stop)
         print(f"[WebSocketClient] Stopped — sent={self.sent_count} failed={self.failed_count}")
 
@@ -87,36 +87,26 @@ class WebSocketClient:
     # ── Main async connection + send loop ────────────────────────────────
     async def _connect_and_send(self):
         retries = 0
-
-        while self.is_running and retries < self.max_retries:
+        while self.is_running:
             try:
-                print(f"[WebSocketClient] Connecting... (attempt {retries + 1})")
                 async with websockets.connect(
                     self.url,
                     ping_interval = 20,
                     ping_timeout  = 10,
                 ) as ws:
-                    self._ws        = ws
+                    self._ws          = ws
                     self.is_connected = True
-                    retries           = 0   # reset on successful connect
+                    retries           = 0
                     print(f"[WebSocketClient] Connected to {self.url}")
-
-                    # Send queued events
                     await self._send_loop(ws)
 
             except Exception as e:
                 self.is_connected = False
                 retries          += 1
-                print(
-                    f"[WebSocketClient] Connection failed: {e} "
-                    f"— retrying in {self.retry_interval}s "
-                    f"({retries}/{self.max_retries})"
-                )
-                await asyncio.sleep(self.retry_interval)
-
-        if retries >= self.max_retries:
-            print("[WebSocketClient] Max retries reached — giving up")
-            self.is_running = False
+                # Only print first failure and every 10th after
+                if retries == 1 or retries % 10 == 0:
+                    print(f"[WebSocketClient] No backend yet — retrying silently... (attempt {retries})")
+            await asyncio.sleep(self.retry_interval)
 
     # ── Send loop — drains queue while connected ──────────────────────────
     async def _send_loop(self, ws):

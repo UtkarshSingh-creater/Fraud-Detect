@@ -20,11 +20,12 @@ class WindowMonitor:
         self.last_app         = None
         self.switch_count     = 0
         self.last_switch_time = None
+        self._detected_suspicious = set()  # track already-reported suspicious apps
 
         # Apps allowed during interview
         self.ALLOWED_APPS = [
             "zoom", "skype", "teams", "meet",
-            "terminal", "iterm", "python",
+            "iterm", "python",
             "code", "cursor", "antigravity",
         ]
 
@@ -35,6 +36,8 @@ class WindowMonitor:
             "whatsapp", "telegram", "messages",
             "notes", "textedit", "notepad",
             "edge", "brave", "opera", "finder",
+            "terminal", "iterm", "python",
+            
         ]
 
     # ── Start ────────────────────────────────────────────────────────────
@@ -67,12 +70,14 @@ class WindowMonitor:
     def _loop_macos(self):
         try:
             from AppKit import NSWorkspace
+            import subprocess
         except ImportError:
             print("[WindowMonitor] Install: pip install pyobjc-framework-Cocoa")
             return
 
         while self.is_running:
             try:
+                # Check focused app
                 workspace  = NSWorkspace.sharedWorkspace()
                 active_app = workspace.activeApplication()
                 app_name   = active_app.get(
@@ -82,6 +87,25 @@ class WindowMonitor:
                 if app_name and app_name != self.last_app:
                     self._handle_switch(app_name)
                     self.last_app = app_name
+
+                # Also check ALL running apps for suspicious ones
+                # This catches floating windows and background apps
+                running_apps = workspace.runningApplications()
+                for app in running_apps:
+                    name = (app.localizedName() or "").lower()
+                    if any(s in name for s in self.SUSPICIOUS_APPS):
+                        if name not in self._detected_suspicious:
+                            self._detected_suspicious.add(name)
+                            self._send_event({
+                                "type":          "tab_switch",
+                                "flagged":       True,
+                                "app_name":      name,
+                                "switch_count":  self.switch_count,
+                                "duration_ms":   0,
+                                "is_suspicious": True,
+                                "message":       f"Suspicious app running: {name} (floating window possible)",
+                                "timestamp":     time.time(),
+                            })
 
             except Exception as e:
                 print(f"[WindowMonitor] macOS error: {e}")

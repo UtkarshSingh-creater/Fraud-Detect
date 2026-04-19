@@ -26,25 +26,25 @@ FACE_MATCH_TOLERANCE        = 0.55  # lower = stricter match (0.0 to 1.0)
 MAX_ALLOWED_FACES           = 1     # flag if more than 1 face detected
 
 # ── Gaze Tracking ──────────────────────────────
-GAZE_OFFSCREEN_THRESHOLD_X  = 0.70  # x > 0.70 = looking right off screen
-GAZE_OFFSCREEN_THRESHOLD_Y  = 0.70  # y > 0.70 = looking down off screen
-GAZE_LOCK_SECONDS           = 2    # flag if gaze locked to one spot for 3s
-GAZE_SEND_INTERVAL_MS       = 500   # send gaze event every 500ms
+GAZE_OFFSCREEN_THRESHOLD_X  = 0.65  # x > 0.65 = looking right off screen
+GAZE_OFFSCREEN_THRESHOLD_Y  = 0.65  # y > 0.65 = looking down off screen
+GAZE_LOCK_SECONDS           = 1.5   # flag if gaze locked to one spot for 1.5s
+GAZE_SEND_INTERVAL_MS       = 300   # send gaze event every 300ms
 
 # ── Head Pose ──────────────────────────────────
-HEAD_YAW_THRESHOLD          = 30    # degrees left/right before flagging
-HEAD_PITCH_THRESHOLD        = 25    # degrees up/down before flagging
-HEAD_POSE_ALERT_COUNT       = 2    # flag after 3 consecutive violations
+HEAD_YAW_THRESHOLD          = 25    # degrees left/right before flagging
+HEAD_PITCH_THRESHOLD        = 20    # degrees up/down before flagging
+HEAD_POSE_ALERT_COUNT       = 3    # flag after 1 consecutive violation
 
 # ── Liveness ───────────────────────────────────
-BLINK_EAR_THRESHOLD         = 0.22  # Eye Aspect Ratio below this = blink
-BLINK_CONSEC_FRAMES         = 2     # frames eye must be closed to count
+BLINK_EAR_THRESHOLD         = 0.18  # Eye Aspect Ratio below this = blink (raised for webcam)
+BLINK_CONSEC_FRAMES         = 1     # frames eye must be closed to count (1 = more sensitive)
 MIN_BLINK_RATE_PER_MINUTE   = 5     # below this = possibly not live
 MAX_BLINK_RATE_PER_MINUTE   = 50    # above this = nervous/suspicious
 
 # ── Behavioral Biometrics ──────────────────────
 KEYSTROKE_BASELINE_SECONDS  = 120   # build baseline for first 2 minutes
-KEYSTROKE_ANOMALY_THRESHOLD = 2.5   # flag if deviation > 2.5x baseline avg
+KEYSTROKE_ANOMALY_THRESHOLD = 10.0   # flag if deviation > 2.5x baseline avg
 PASTE_CHAR_THRESHOLD        = 80   # flag paste if more than 100 chars
 MOUSE_SAMPLE_INTERVAL_MS    = 100   # sample mouse position every 100ms
 MOUSE_SPEED_THRESHOLD       = 3000  # pixels/sec — above this is suspicious
@@ -54,7 +54,7 @@ AUDIO_SAMPLE_RATE           = 16000
 AUDIO_CHUNK_SIZE            = 1024
 AUDIO_CHANNELS              = 1
 SPEAKER_COUNT_THRESHOLD     = 1     # flag if more than 1 speaker detected
-WHISPER_ENERGY_THRESHOLD    = 0.01  # low energy + voice = whisper
+WHISPER_ENERGY_THRESHOLD    = 0.04  # low energy + voice = whisper
 NOISE_ANOMALY_THRESHOLD     = 0.85  # sudden spike in audio energy
 
 # ── Object Detection (YOLOv8-nano) ─────────────────
@@ -73,24 +73,30 @@ TEMPORAL_SUSPICIOUS_THRESHOLD = 0.80 # flag if LSTM confidence > 0.80
 
 # ── Risk Scoring Weights ───────────────────────
 # All weights must add up to 100
+# Sustained-detection multiplier (risk_engine.py) scales each
+# contribution up to 2× after 2 seconds of continuous flagging.
 RISK_WEIGHTS = {
-    "face_missing":       10,
-    "multiple_faces":     15,
-    "gaze_offscreen":     10,
-    "head_pose":           5,
-    "liveness_fail":      10,
-    "biometric_anomaly":  10,
-    "audio_anomaly":       5,
-    "deepfake":           10,
-    "temporal_pattern":    5,
-    "banned_object":      15,
-    "tab_switch":          5,
+    "face_missing":        8,   # ---
+    "multiple_faces":     10,   # ---
+    "gaze_offscreen":     13,   # primary behavioural signal
+    "head_pose":          13,   # primary behavioural signal
+    "liveness_fail":       6,   # blink / movement check
+    "biometric_anomaly":   10,   # keystroke / mouse oddity
+    "audio_anomaly":       1,   # voice / noise
+    "deepfake":            4,   # synthetic face
+    "temporal_pattern":    2,   # LSTM pattern
+    "banned_object":      27,   # HIGHEST — phone/book = direct cheating tool
+    "tab_switch":          8,   # window / app switch
 }
+# Weights sum: 8+10+13+13+6+4+3+4+4+30+5 = 100
 
-# Risk level thresholds
-RISK_LOW_MAX    = 39    # 0–39   = LOW
-RISK_MEDIUM_MAX = 69    # 40–69  = MEDIUM
-                        # 70–100 = HIGH
+# Risk level thresholds (with sustained-escalation multiplier):
+#   First phone detection alone  → score ≈ 30  → MEDIUM
+#   Phone held 2 s alone         → score ≈ 60  → HIGH
+#   All signals together 2 s     → score ≈ 90+ → HIGH (capped 100)
+RISK_LOW_MAX    = 30   # 0–25   = LOW
+RISK_MEDIUM_MAX = 60    # 26–55  = MEDIUM
+                        # 56–100 = HIGH
 
 # ── Banned Processes ───────────────────────────
 BANNED_PROCESSES = [
