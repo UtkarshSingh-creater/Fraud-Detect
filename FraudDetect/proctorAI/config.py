@@ -1,11 +1,17 @@
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────
 # config.py — Central configuration for ProctorAI
 # All thresholds, limits and settings live here
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────
+
+import os
+from dotenv import load_dotenv
+
+# Load .env file if it exists
+load_dotenv()
 
 # ── WebSocket ──────────────────────────────────
-WEBSOCKET_URL = "ws://localhost:8000/ws/agent"   # backend team will replace this
-SESSION_ID    = "session_001"                     # will be passed dynamically later
+WEBSOCKET_URL = os.getenv("WEBSOCKET_URL", "ws://localhost:8000/ws/agent")
+SESSION_ID    = os.getenv("SESSION_ID", "session_001")
 
 # ── Camera ─────────────────────────────────────
 CAMERA_INDEX  = 0          # 0 = default webcam
