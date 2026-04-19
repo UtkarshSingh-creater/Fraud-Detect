@@ -25,6 +25,7 @@ from ml_models.deepfake_detector import DeepfakeDetector
 from ml_models.temporal_analyzer import TemporalAnalyzer
 from scoring.risk_engine         import RiskEngine
 from biometrics.window_monitor   import WindowMonitor
+from websocket_client            import WebSocketClient
 from config import (
     CAMERA_INDEX,
     FRAME_WIDTH,
@@ -227,7 +228,7 @@ def start_process_monitor(on_event):
 # Central Event Callback
 # Every event from every module passes through here — single funnel.
 # ─────────────────────────────────────────────────────────────────────────
-def make_on_event(risk_engine, temporal_analyzer):
+def make_on_event(risk_engine, temporal_analyzer, ws_client):
     """
     Returns the on_event() callback used by all modules.
 
@@ -244,8 +245,7 @@ def make_on_event(risk_engine, temporal_analyzer):
         # 2. Feed into risk engine — get updated risk score
         risk_output = risk_engine.process_event(event)
 
-        # 3. Print flagged events to console
-        #    ── Replace this block with ws_client.send(risk_output) ──
+        # 3. Always print flagged events to console
         if event.get("flagged"):
             level = risk_output["risk_level"]
             score = risk_output["risk_score"]
@@ -257,7 +257,11 @@ def make_on_event(risk_engine, temporal_analyzer):
                 f"| {etype} — {msg}"
             )
 
+        # 4. Send to backend via WebSocket
+        ws_client.send(risk_output)
+
     return on_event
+
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -515,6 +519,8 @@ def main():
     #    (needed before we can build the on_event callback)
     # ─────────────────────────────────────────────────────────────────────
     risk_engine = RiskEngine()
+    ws_client = WebSocketClient(session_id=SESSION_ID)
+    ws_client.start()
 
     # Temporal analyzer fires its own events of type "temporal".
     # These go directly to risk_engine — NOT back through on_event
@@ -525,7 +531,7 @@ def main():
     )
 
     # Build the central callback — used by all other modules
-    on_event = make_on_event(risk_engine, temporal_analyzer)
+    on_event = make_on_event(risk_engine, temporal_analyzer, ws_client)
 
     # ─────────────────────────────────────────────────────────────────────
     # 2. Init vision modules (per-frame, synchronous)
@@ -633,6 +639,7 @@ def main():
             gaze_tracker.release()
             head_pose.release()
             liveness.release()
+            ws_client.stop()
             # FaceDetector uses face_recognition — no .release() needed
         except Exception as e:
             print(f"[main] Shutdown error: {e}")
@@ -642,6 +649,7 @@ def main():
 
         # ── Final session report ──────────────────────────────────────
         snap = risk_engine.get_snapshot()
+        ws_stats = ws_client.get_stats()
         print(f"\n── Final Session Report ─────────────────────────────")
         print(f"  Session ID    : {SESSION_ID}")
         print(f"  Risk Score    : {snap['risk_score']} / 100")
@@ -651,6 +659,9 @@ def main():
         print(f"  Signal Counts : {snap['signal_counts']}")
         print(f"  Total Events  : {snap['total_events']}")
         print(f"  Session Time  : {snap['session_elapsed']}s")
+        print(f"  WS Sent       : {ws_stats['sent_count']}")
+        print(f"  WS Failed     : {ws_stats['failed_count']}")
+        print(f"  WS Dropped    : {ws_stats['dropped_count']}")
         print(f"─────────────────────────────────────────────────────\n")
         sys.exit(0)
 
