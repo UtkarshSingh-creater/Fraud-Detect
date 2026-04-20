@@ -90,10 +90,10 @@ class RiskEngine:
         # Temporal smoothing — score rises fast, falls slowly
         if score > self.smoothed_score:
             # Rising — react quickly to new threats
-            self.smoothed_score = 0.6 * self.smoothed_score + 0.4 * score
+            self.smoothed_score = 0.4 * self.smoothed_score + 0.6 * score
         else:
             # Falling — decay slowly so past behavior counts
-            self.smoothed_score = 0.92 * self.smoothed_score + 0.08 * score
+            self.smoothed_score = 0.93 * self.smoothed_score + 0.07 * score
 
         smoothed = min(round(self.smoothed_score), 100)
 

@@ -26,17 +26,42 @@ class WindowMonitor:
         self.ALLOWED_APPS = [
             "zoom", "skype", "teams", "meet",
             "antigravity", "finder",
+            "linkednotesuiservice",
+            "quicklookuiservice",
+            "sharesheetui",
+            "autofill",
+            "themewidgetcontrolviewservice",
+            "open and save panel service",
+            "controlcentre",
+            "notificationcentre",
+            "systempreferences",
+            "systemsettings",
+            "python",           # interview coding environment
+            "terminal",         # interview coding environment
+            "iterm2",
+            "xcode",
+            "vscode",
+            "code",
         ]
 
-        # Apps that are immediately suspicious
         self.SUSPICIOUS_APPS = [
-            "chatgpt", "claude", "safari",
-            "chrome", "firefox", "notion",
-            "whatsapp", "telegram", "messages",
-            "notes", "textedit", "notepad",
-            "edge", "brave", "opera",
-            "terminal", "iterm", "python",
-            
+            "chatgpt",
+            "claude",
+            "safari",
+            "chrome",
+            "firefox",
+            "notion",
+            "whatsapp",
+            "telegram",
+            "messages",
+            "notes",
+            "textedit",
+            "notepad",
+            "edge",
+            "brave",
+            "opera",
+            "perplexity",
+            "copilot",
         ]
 
     # ── Start ────────────────────────────────────────────────────────────
