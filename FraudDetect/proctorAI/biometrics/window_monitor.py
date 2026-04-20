@@ -25,8 +25,7 @@ class WindowMonitor:
         # Apps allowed during interview
         self.ALLOWED_APPS = [
             "zoom", "skype", "teams", "meet",
-            "iterm", "python",
-            "code", "cursor", "antigravity",
+            "antigravity", "finder",
         ]
 
         # Apps that are immediately suspicious
@@ -35,7 +34,7 @@ class WindowMonitor:
             "chrome", "firefox", "notion",
             "whatsapp", "telegram", "messages",
             "notes", "textedit", "notepad",
-            "edge", "brave", "opera", "finder",
+            "edge", "brave", "opera",
             "terminal", "iterm", "python",
             
         ]

@@ -124,8 +124,12 @@ class HeadPoseEstimator:
         self.last_roll  = round(roll,  2)
 
         # ── Check thresholds ─────────────────────────────────────────
-        yaw_flagged   = abs(yaw)   > HEAD_YAW_THRESHOLD
-        pitch_flagged = abs(pitch) > HEAD_PITCH_THRESHOLD
+        # Apply calibration offset if available
+        neutral_yaw   = getattr(self, "_neutral_yaw",   0.0)
+        neutral_pitch = getattr(self, "_neutral_pitch",  0.0)
+
+        yaw_flagged   = abs(yaw   - neutral_yaw)   > HEAD_YAW_THRESHOLD
+        pitch_flagged = abs(pitch - neutral_pitch) > HEAD_PITCH_THRESHOLD
         flagged       = yaw_flagged or pitch_flagged
 
         if flagged:

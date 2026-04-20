@@ -150,11 +150,21 @@ class AudioMonitor:
         self.last_event_time = now
 
         # ── Check for whispering ──────────────────────────────────────
-        whisper_detected = (
+        # Check for whisper — must be sustained, not a single chunk
+        is_whisper_chunk = (
             is_speech and
             rms_energy < WHISPER_ENERGY_THRESHOLD and
-            rms_energy > 0.003   # not complete silence
+            rms_energy > 0.003
         )
+
+        # Track consecutive whisper chunks
+        self._whisper_count = getattr(self, "_whisper_count", 0)
+        if is_whisper_chunk:
+            self._whisper_count += 1
+        else:
+            self._whisper_count = 0
+
+        whisper_detected = self._whisper_count >= 6  # ~3 seconds sustained
 
         # ── Check for noise anomaly ───────────────────────────────────
         noise_anomaly = False

@@ -239,23 +239,27 @@ def make_on_event(risk_engine, temporal_analyzer, ws_client):
             → print / send to backend if flagged
     """
     def on_event(event):
-        # 1. Feed into temporal LSTM context window
+    # 1. Feed into temporal LSTM context window
         temporal_analyzer.add_event(event)
 
-        # 2. Feed into risk engine — get updated risk score
+    # 2. Feed into risk engine — get updated risk score
         risk_output = risk_engine.process_event(event)
 
-        # 3. Always print flagged events to console
+    # 3. Only print when level changes or score changes by 5+
         if event.get("flagged"):
             level = risk_output["risk_level"]
             score = risk_output["risk_score"]
             conf  = risk_output["confidence"]
             msg   = event.get("message", "")
             etype = event.get("type", "unknown")
-            print(
-                f"  [{level}] score={score} conf={conf} "
-                f"| {etype} — {msg}"
-            )
+
+            prev_level = on_event.__dict__.get("_prev_level", "LOW")
+            prev_score = on_event.__dict__.get("_prev_score", 0)
+
+            if level != prev_level or abs(score - prev_score) >= 5:
+                print(f"  [{level}] score={score} conf={conf} | {etype} — {msg}")
+                on_event.__dict__["_prev_level"] = level
+                on_event.__dict__["_prev_score"] = score
 
         # 4. Send to backend via WebSocket
         ws_client.send(risk_output)
@@ -303,6 +307,82 @@ def capture_baseline(cap, face_detector):
     print("\n[main]   ✗ Baseline capture timed out after 30s — exiting")
     return False
 
+# ─────────────────────────────────────────────────────────────────────────
+# Calibration Phase
+# ─────────────────────────────────────────────────────────────────────────
+def run_calibration(cap, gaze_tracker, head_pose, liveness):
+    """
+    10 second calibration — learns candidate's natural:
+    - Head position (neutral yaw/pitch)
+    - Gaze center point
+    - Blink rate baseline
+    Runs before main loop so thresholds adapt to the person.
+    """
+    print("[main] ── Calibration ─────────────────────────────────────")
+    print("[main]   Look straight at the camera and sit normally.")
+    print("[main]   Calibrating for 10 seconds...\n")
+
+    start        = time.time()
+    yaw_samples  = []
+    pitch_samples= []
+    gaze_x_s     = []
+    gaze_y_s     = []
+    frame_count  = 0
+
+    while time.time() - start < 10.0:
+        ok, frame = cap.read()
+        if not ok:
+            time.sleep(0.05)
+            continue
+
+        frame_count += 1
+        remaining   = int(10 - (time.time() - start))
+
+        # Collect head pose samples
+        try:
+            hp_events = head_pose.process_frame(frame)
+            if hp_events:
+                e = hp_events[0]
+                yaw_samples.append(e.get("yaw", 0))
+                pitch_samples.append(e.get("pitch", 0))
+        except Exception:
+            pass
+
+        # Collect gaze samples
+        try:
+            gz_events = gaze_tracker.process_frame(frame)
+            if gz_events:
+                e = gz_events[0]
+                gaze_x_s.append(e.get("x", 0.5))
+                gaze_y_s.append(e.get("y", 0.5))
+        except Exception:
+            pass
+
+        # Print countdown every second
+        if frame_count % 30 == 0:
+            print(f"[main]   {remaining}s remaining...", end="\r")
+
+        time.sleep(1.0 / 30)
+
+    # Compute calibration offsets
+    import numpy as np
+    if yaw_samples:
+        neutral_yaw   = float(np.mean(yaw_samples))
+        neutral_pitch = float(np.mean(pitch_samples))
+        neutral_gx    = float(np.mean(gaze_x_s)) if gaze_x_s else 0.5
+        neutral_gy    = float(np.mean(gaze_y_s)) if gaze_y_s else 0.5
+
+        print(f"\n[main]   ✓ Calibration complete")
+        print(f"[main]   Neutral yaw={neutral_yaw:.1f} pitch={neutral_pitch:.1f}")
+        print(f"[main]   Neutral gaze=({neutral_gx:.3f}, {neutral_gy:.3f})\n")
+
+        # Store on modules for offset correction
+        head_pose._neutral_yaw   = neutral_yaw
+        head_pose._neutral_pitch = neutral_pitch
+        gaze_tracker._neutral_x  = neutral_gx
+        gaze_tracker._neutral_y  = neutral_gy
+    else:
+        print("\n[main]   ⚠️  Calibration skipped — no face detected\n")
 
 # ─────────────────────────────────────────────────────────────────────────
 # Main
@@ -581,6 +661,9 @@ def main():
         print("[main] Baseline capture cancelled — exiting")
         cap.release()
         sys.exit(0)
+    
+    # After baseline capture
+    run_calibration(cap, gaze_tracker, head_pose, liveness)
 
     # ─────────────────────────────────────────────────────────────────────
     # 6. Start all background threads

@@ -82,7 +82,15 @@ class WebSocketClient:
     def _run_loop(self):
         self._loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self._loop)
-        self._loop.run_until_complete(self._connect_and_send())
+        try:
+            self._loop.run_until_complete(self._connect_and_send())
+        except RuntimeError:
+            pass  # expected on shutdown
+        finally:
+            try:
+                self._loop.close()
+            except Exception:
+                pass
 
     # ── Main async connection + send loop ────────────────────────────────
     async def _connect_and_send(self):

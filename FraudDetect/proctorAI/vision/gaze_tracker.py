@@ -68,11 +68,16 @@ class GazeTracker:
 
         # ── Track offscreen percentage ───────────────────────────────
         self.total_gaze_samples += 1
+        # Apply calibration offset if available
+        neutral_x = getattr(self, "_neutral_x", 0.5)
+        neutral_y = getattr(self, "_neutral_y", 0.5)
+
+        deviation_x = abs(norm_x - neutral_x)
+        deviation_y = abs(norm_y - neutral_y)
+
         is_offscreen = (
-            norm_x > GAZE_OFFSCREEN_THRESHOLD_X or
-            norm_x < (1.0 - GAZE_OFFSCREEN_THRESHOLD_X) or
-            norm_y > GAZE_OFFSCREEN_THRESHOLD_Y or
-            norm_y < (1.0 - GAZE_OFFSCREEN_THRESHOLD_Y)
+            deviation_x > (GAZE_OFFSCREEN_THRESHOLD_X - 0.5) or
+            deviation_y > (GAZE_OFFSCREEN_THRESHOLD_Y - 0.5)
         )
         if is_offscreen:
             self.offscreen_samples += 1
