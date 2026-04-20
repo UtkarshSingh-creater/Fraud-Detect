@@ -36,6 +36,9 @@ class RiskEngine:
             "mouse_anomaly":     {"flagged": False, "severity": 0.0, "count": 0},
         }
 
+        self.smoothed_score  = 0.0   # exponentially smoothed score
+        self.peak_score      = 0     # highest score in session
+
         # ── Event log ─────────────────────────────────────────────────
         self.events          = []
         self.session_start   = time.time()
@@ -84,9 +87,22 @@ class RiskEngine:
         level            = self._classify(score)
         confidence       = self._compute_confidence()
 
-        self.current_score = score
-        self.current_level = level
+        # Temporal smoothing — score rises fast, falls slowly
+        if score > self.smoothed_score:
+            # Rising — react quickly to new threats
+            self.smoothed_score = 0.6 * self.smoothed_score + 0.4 * score
+        else:
+            # Falling — decay slowly so past behavior counts
+            self.smoothed_score = 0.92 * self.smoothed_score + 0.08 * score
+
+        smoothed = min(round(self.smoothed_score), 100)
+
+        self.current_score = smoothed
+        self.current_level = self._classify(smoothed)
         self.confidence    = confidence
+
+        if smoothed > self.peak_score:
+            self.peak_score = smoothed
 
         if score > self.peak_score:
             self.peak_score = score
@@ -349,10 +365,10 @@ class RiskEngine:
         confidence       = self._compute_confidence()
 
         return {
-            "risk_score":         score,
-            "risk_level":         level,
-            "confidence":         confidence,
-            "peak_score":         self.peak_score,
+            "risk_score": self.current_score,
+            "risk_level": self.current_level,
+            "confidence": confidence,
+            "peak_score": self.peak_score,
             "session_peak_score": self.session_peak_score,
             "flagged_signals": [
                 k for k, v in self.signals.items() if v["flagged"]
