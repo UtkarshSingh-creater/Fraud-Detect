@@ -1,34 +1,40 @@
-# Fraud-Detect# ProctorAI Detection Engine
-# ProctorAI — Real-Time Interview Anti-Cheating Engine
+# ProctorAI — Real-Time Interview Anti-Cheating Detection Engine
 
-A Python-based ML detection engine that runs on the candidate's machine
-during live online interviews and streams cheating signals to a backend
-in real time over WebSocket.
+> An ML-powered proctoring engine that runs on the candidate's machine
+> during live online interviews (Skype, Zoom, Teams) and detects
+> cheating in real time using computer vision, audio analysis,
+> and behavioral biometrics.
+
+---
+
+## Demo
+
+[Link to demo video]
 
 ---
 
 ## What It Detects
 
-| Module | Detects |
-|---|---|
-| Face Detection | Missing face, multiple faces, identity swap |
-| Gaze Tracking | Off-screen gaze, gaze locked to corner (floating AI window) |
-| Head Pose | Abnormal head turns (looking at phone/notes) |
-| Liveness | Blink rate, micro-movement (photo/video attack) |
-| Object Detection | Phone, book, laptop via YOLOv8-nano |
-| Keystroke Dynamics | Paste events, inhuman typing speed |
-| Mouse Monitoring | Speed anomalies, rapid clicking |
-| Window Monitor | App switching, banned apps opened |
-| Audio Intelligence | Multiple speakers, whispering, noise anomalies |
-| Deepfake Detection | Synthetic face via MobileNetV2 CNN |
-| Temporal LSTM | Suspicious event sequence patterns |
-| Process Scanner | ChatGPT, Claude, Copilot running in background |
+| Module | What It Catches | Technology |
+|---|---|---|
+| Face Detection | Missing face, identity swap, multiple people | face-recognition, dlib |
+| Gaze Tracking | Looking at corner (floating AI window), off-screen | MediaPipe FaceMesh |
+| Head Pose | Looking at phone/notes left/right/up/down | OpenCV solvePnP |
+| Liveness | Photo/video attack via blink rate + movement | MediaPipe EAR |
+| Object Detection | Phone, book, laptop on desk | YOLOv8-nano |
+| Keystroke Dynamics | Paste events, inhuman typing speed | pynput |
+| Mouse Monitoring | Speed anomalies, rapid clicking | pynput |
+| Window Monitor | App switching, browser opens, floating windows | AppKit/pywin32 |
+| Audio Intelligence | Multiple speakers, whispering | PyAudio, webrtcvad |
+| Deepfake Detection | Synthetic/AI-generated face | MobileNetV2 CNN |
+| Temporal LSTM | Suspicious behavior patterns over time | PyTorch LSTM |
+| Process Scanner | ChatGPT, Claude, Copilot running in background | psutil |
 
 ---
 
-## Output — What the Backend Receives
+## Risk Score Output
 
-Every event sends a JSON payload over WebSocket:
+Every detection sends a JSON payload over WebSocket to the backend:
 
 ```json
 {
@@ -38,162 +44,165 @@ Every event sends a JSON payload over WebSocket:
   "session_id": "session_001",
   "trigger_event": "banned_object",
   "flagged_signals": ["gaze_offscreen", "banned_object", "audio_anomaly"],
-  "breakdown": {
-    "gaze_offscreen":  { "weight": 10, "flagged": true,  "severity": 0.9 },
-    "banned_object":   { "weight": 15, "flagged": true,  "severity": 1.0 },
-    "audio_anomaly":   { "weight": 5,  "flagged": true,  "severity": 0.7 }
-  },
-  "events": [...],
   "timestamp": 1713456789.123
 }
 ```
 
+Risk levels:
+
+| Score | Level |
+|---|---|
+| 0–30 | LOW |
+| 31–60 | MEDIUM |
+| 61–100 | HIGH |
+
 ---
 
-## Project Structure
-proctorAI/
-├── main.py                        ← entry point — run this
-├── config.py                      ← all thresholds and settings
-├── websocket_client.py            ← streams events to backend
-├── .env                           ← your credentials (never commit)
-├── .env.example                   ← template for backend team
-├── requirements.txt               ← all dependencies
+## Architecture
+Candidate's Machine
 │
 ├── vision/
-│   ├── face_detector.py           ← face detection + recognition
-│   ├── gaze_tracker.py            ← iris + gaze tracking
-│   ├── head_pose.py               ← head angle estimation
-│   ├── liveness.py                ← blink + movement detection
-│   └── object_detector.py         ← YOLOv8 banned object detection
+│   ├── face_detector.py      → face + identity
+│   ├── gaze_tracker.py       → iris + gaze
+│   ├── head_pose.py          → head angle
+│   ├── liveness.py           → blink + movement
+│   └── object_detector.py    → YOLOv8 banned objects
 │
 ├── biometrics/
-│   ├── keystroke.py               ← keystroke dynamics + paste
-│   ├── mouse.py                   ← mouse speed + click patterns
-│   └── window_monitor.py          ← app/window switch detection
+│   ├── keystroke.py          → typing + paste
+│   ├── mouse.py              → mouse speed
+│   └── window_monitor.py     → app switching
 │
 ├── audio/
-│   └── audio_monitor.py           ← voice + whisper + noise
+│   └── audio_monitor.py      → voice + whisper
 │
 ├── ml_models/
-│   ├── deepfake_detector.py       ← MobileNetV2 real vs fake
-│   ├── temporal_analyzer.py       ← LSTM suspicious pattern detection
-│   ├── train_temporal.py          ← training script
-│   └── weights/
-│       └── temporal_lstm.pth      ← trained LSTM weights
+│   ├── deepfake_detector.py  → real vs fake face
+│   ├── temporal_analyzer.py  → LSTM pattern detection
+│   └── train_temporal.py     → training script
 │
 ├── scoring/
-│   └── risk_engine.py             ← combines all signals → risk score
+│   └── risk_engine.py        → weighted + smoothed score
 │
-└── tests/                         ← individual module tests
-├── test_face_detector.py
-├── test_gaze_tracker.py
-├── test_head_pose.py
-├── test_liveness.py
-├── test_keystroke.py
-├── test_mouse.py
-├── test_audio.py
-├── test_deepfake.py
-├── test_temporal.py
-├── test_risk_engine.py
-├── test_object_detector.py
-├── test_window_monitor.py
-└── test_websocket_client.py
-
+├── websocket_client.py       → streams to backend
+└── main.py                   → orchestrates everything
+│
+│ WebSocket JSON
+▼
+Backend (Django / FastAPI)
+│
+▼
+Interviewer Dashboard
 ---
 
 ## Setup
 
-### 1. Clone and create virtual environment
+### Requirements
+- Python 3.11
+- macOS or Windows
+- Webcam + Microphone
+
+### Installation
+
 ```bash
 git clone https://github.com/UtkarshSingh-creater/Fraud-Detect.git
 cd Fraud-Detect/FraudDetect/proctorAI
 python -m venv venv
-source venv/bin/activate        # macOS/Linux
+source venv/bin/activate        # macOS
 venv\Scripts\activate           # Windows
-```
-
-### 2. Install dependencies
-```bash
 pip install -r requirements.txt
 ```
 
-### 3. macOS extra dependencies
+### macOS Extra Setup
 ```bash
 brew install cmake portaudio boost
 pip install pyobjc-framework-Cocoa
 ```
 
-### 4. Windows extra dependencies
+### Windows Extra Setup
 ```bash
 pip install pywin32
 ```
 
-### 5. Configure environment
+### macOS Permissions Required
+- System Settings → Privacy & Security → **Camera** → add Terminal
+- System Settings → Privacy & Security → **Microphone** → add Terminal
+- System Settings → Privacy & Security → **Input Monitoring** → add Terminal
+
+### Environment Config
 ```bash
 cp .env.example .env
-# Edit .env and set WEBSOCKET_URL and SESSION_ID
+# Edit .env — set WEBSOCKET_URL and SESSION_ID
 ```
 
-### 6. Grant macOS permissions
-- System Settings → Privacy & Security → Camera → add Terminal
-- System Settings → Privacy & Security → Microphone → add Terminal
-- System Settings → Privacy & Security → Input Monitoring → add Terminal
-
-### 7. Run
+### Run
 ```bash
+# From repo root, just type:
+proctorai
+
+# Or manually:
 cd FraudDetect/proctorAI
 python main.py
 ```
 
 ---
 
+## How It Works
+
+### Session Flow
+Baseline face capture (2 seconds)
+↓
+Calibration phase (10 seconds)
+— learns neutral head pose and gaze center
+↓
+Live detection starts
+— all modules run simultaneously
+— risk score updated in real time
+↓
+Events stream to backend via WebSocket
+↓
+Session report on exit
+### Calibration
+The system spends 10 seconds learning your natural head position and gaze center before flagging anything. This eliminates false positives from people who naturally tilt their head or have asymmetric gaze.
+
+### Temporal Smoothing
+The risk score uses exponential smoothing:
+- **Rising fast** — 60% weight on new signal (quick response to threats)
+- **Falling slow** — 7% decay per update (past behavior counts)
+
+This prevents score from jumping wildly on single frames.
+
+---
+
 ## Backend Integration
 
-### WebSocket endpoint the backend must expose:
+The backend team needs to expose:
 ws://your-server/ws/agent/{session_id}
-
-### Starting a session
-The backend generates a `session_id` and passes it to the engine via `.env`:
+Start a session with a specific ID:
 ```bash
-SESSION_ID=interview_rahul_2024_04_18 python main.py
+SESSION_ID=interview_rahul_2026_04_18 proctorai
 ```
 
-### Risk levels
-| Score | Level |
-|---|---|
-| 0–39 | LOW |
-| 40–69 | MEDIUM |
-| 70–100 | HIGH |
-
 ---
 
-## Tuning
+## Training the LSTM
 
-All detection thresholds are in `config.py`. Key ones:
+The temporal LSTM is pre-trained on synthetic data:
+```bash
+cd FraudDetect/proctorAI
+python ml_models/train_temporal.py
+```
 
-| Setting | Default | Effect |
-|---|---|---|
-| `GAZE_LOCK_SECONDS` | 2 | Seconds before gaze lock flags |
-| `PASTE_CHAR_THRESHOLD` | 80 | Characters before paste flags |
-| `HEAD_POSE_ALERT_COUNT` | 2 | Consecutive violations before flag |
-| `OBJECT_CONFIDENCE_THRESHOLD` | 0.35 | YOLO detection confidence |
-| `TEMPORAL_SUSPICIOUS_THRESHOLD` | 0.80 | LSTM suspicion threshold |
-
----
-
-## macOS Permission Issues
-
-If you see a SIGTRAP crash on startup:
-1. Quit Terminal completely
-2. Grant Input Monitoring + Microphone in System Settings
-3. Reopen Terminal and run again
+Trained weights are saved to `ml_models/weights/temporal_lstm.pth`.
 
 ---
 
 ## Built With
 
-- OpenCV, MediaPipe, face-recognition, dlib
-- PyTorch, torchvision, ultralytics (YOLOv8)
-- PyAudio, librosa, webrtcvad
-- pynput, psutil, websockets
-- pyobjc (macOS), pywin32 (Windows)
+- **Computer Vision**: OpenCV, MediaPipe, face-recognition, dlib
+- **Object Detection**: YOLOv8-nano (Ultralytics)
+- **ML / Deep Learning**: PyTorch, MobileNetV2, LSTM
+- **Audio**: PyAudio, librosa, webrtcvad
+- **Behavioral**: pynput, psutil
+- **Streaming**: websockets
+- **Platform**: pyobjc (macOS), pywin32 (Windows)
