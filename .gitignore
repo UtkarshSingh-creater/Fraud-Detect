@@ -1,19 +1,25 @@
-# Virtual environment — never upload this
-venv/
+# Environment
+.env
 
-# Secrets — never upload this
-backend/.env
-
-# Python cache files
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
 
-# Database file — contains real candidate data
-backend/proctor.db
+# Virtual environment
+venv/
+env/
 
-# VS Code settings
+# ML model weights (large files)
+ml_models/weights/*.pth
+
+# macOS
+.DS_Store
+
+# VSCode
 .vscode/
-
-# Node modules (for Electron agent later)
-node_modules/
