@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+
+  # ── ProctorAI Backend ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: proctorai_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Copy values from your .env — never hardcode secrets here
+      ENV: ${ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      INTERVIEWER_USERNAME: ${INTERVIEWER_USERNAME}
+      INTERVIEWER_PASSWORD: ${INTERVIEWER_PASSWORD}
+      AGENT_API_KEY: ${AGENT_API_KEY}
+      DB_PATH: /app/data/proctor.db
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+    volumes:
+      - proctor_data:/app/data      # SQLite database — persists across restarts
+      - proctor_logs:/app/logs      # Log files — persists across restarts
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Optional: nginx reverse proxy ──────────────────────────────────────────
+  # Uncomment this block when deploying to a VPS/server.
+  # Handles SSL termination + forwards traffic to the backend.
+  #
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: proctorai_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./certs:/etc/nginx/certs:ro        # your SSL certs
+  #   depends_on:
+  #     backend:
+  #       condition: service_healthy
+
+volumes:
+  proctor_data:
+  proctor_logs:
