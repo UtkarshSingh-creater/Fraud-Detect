@@ -1,0 +1,19 @@
+# Virtual environment — never upload this
+venv/
+
+# Secrets — never upload this
+backend/.env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Database file — contains real candidate data
+backend/proctor.db
+
+# VS Code settings
+.vscode/
+
+# Node modules (for Electron agent later)
+node_modules/
