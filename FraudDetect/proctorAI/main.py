@@ -135,7 +135,9 @@ def _handle_sigtrap(signum, frame):
     _os._exit(1)
 
 try:
-    signal.signal(signal.SIGTRAP, _handle_sigtrap)
+    #signal.signal(signal.SIGTRAP, _handle_sigtrap)
+    if hasattr(signal, 'SIGTRAP'):
+        signal.signal(signal.SIGTRAP, _handle_sigtrap)
 except (OSError, ValueError):
     pass
 

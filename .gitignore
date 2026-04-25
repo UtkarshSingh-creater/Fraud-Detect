@@ -23,3 +23,9 @@ ml_models/weights/*.pth
 
 # VSCode
 .vscode/
+.venv/
+.venv311/
+.env
+backend/logs/
+*.log
+*.log.gz
